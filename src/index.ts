@@ -3,39 +3,38 @@ import * as cartCountUtility from './utilities/cartCount'
 import * as totalPriceUtility from './utilities/totalPrice'
 import { Product } from './customTypes/productType'
 import { createModalContent } from './operations/modalContent'
-import { createIndex } from './miscellaneous/misc'
+import { createIndex } from './miscellaneous/createIndex'
 
 // Declaring custom type
-type Products = Product[]
+type Products = Product[];
 
 // GLOBAL VARIABLES
-let start = 0
-let end = 8
-let currentPage = 1
-export let productArray:Products | string[] = []
-let productCount = 0
+const start = 0
+const end = 8
+let currentPage: number = 1
+export let productArray: Products | string[] = []
+let productCount: number = 0
 
 // --------------------------- INITIALISING -------------------------------------------
 // Fetching the product list from the API
-getProducts('https://api.jsonbin.io/b/60d10c3c5ed58625fd162e87')
+getProducts('http://localhost:5000/api/products')
 let products: Products = JSON.parse(localStorage.getItem('data')!)
-
 showProducts(products, start, end)
 onLoadCartState()
 // --------------------------- PRODUCT FETCH AND DISPLAY FUNCTIONS --------------------------
 // Fetching the products
-async function getProducts (url: string) : Promise<void> {
+async function getProducts(url: string): Promise<void> {
   let response = await fetch(url)
   response = await response.json()
   localStorage.setItem('data', JSON.stringify(response))
 }
 
 // The function used to display products on the screen
-function showProducts (products:Products, start:number, end:number) :void {
+function showProducts(products: Products, start: number, end: number): void {
   const productsDiv: Element = document.querySelector('#Products')!
   let prodID = 1
 
-  for (let i = start; i <= end; i++) {
+  products.forEach((product, index) => {
     const div1: HTMLDivElement = document.createElement('div')
     div1.className = 'col-lg-6 col-xl-4'
     div1.id = `div-1${prodID}`
@@ -44,27 +43,27 @@ function showProducts (products:Products, start:number, end:number) :void {
     div2.className = 'panel panel-default'
     div2.id = `div-2${prodID}`
 
-    const div3 : HTMLDivElement = document.createElement('div')
+    const div3: HTMLDivElement = document.createElement('div')
     div3.className = 'panel-body'
     div3.id = `div-3${prodID}`
 
     prodID++
 
-    const { images } = products[i]
-    const productImage:HTMLImageElement = document.createElement('img')
+    const { images } = product
+    const productImage: HTMLImageElement = document.createElement('img')
     productImage.src = images[0]
     productImage.className = 'image-fluid'
     div3.append(productImage)
 
-    const productName:HTMLHeadingElement = document.createElement('h6')
-    const productPrice:HTMLParagraphElement = document.createElement('p')
-    const button:HTMLButtonElement = document.createElement('button')
+    const productName: HTMLHeadingElement = document.createElement('h6')
+    const productPrice: HTMLParagraphElement = document.createElement('p')
+    const button: HTMLButtonElement = document.createElement('button')
     button.innerHTML = 'Add to Cart'
     button.className = 'addCart btn btn-primary'
     button.onclick = addToCart
 
-    productName.innerText = `Product name : ${products[i].title}`
-    productPrice.innerText = `Product price : $${products[i].price}`
+    productName.innerText = `Product name : ${product.title}`
+    productPrice.innerText = `Product price : $${product.price}`
 
     div3.append(productName)
     div3.append(productPrice)
@@ -74,12 +73,12 @@ function showProducts (products:Products, start:number, end:number) :void {
     productsDiv.append(div1)
 
     // Storing the index of the product in main data array
-    localStorage.setItem(div3.id, i.toString())
-  }
+    localStorage.setItem(div3.id, index.toString())
+  })
 }
 
 // Function for add to cart buttom
-function addToCart (e:MouseEvent):void {
+function addToCart(e: MouseEvent): void {
   const btn = e.target as HTMLButtonElement
   const { id } = btn.parentElement!
   const index: number = parseInt(localStorage.getItem(id)!)
@@ -92,13 +91,16 @@ function addToCart (e:MouseEvent):void {
 // -------------------------------------------------------------------------------
 
 // CART MODAL CONTENT
-(document.querySelector('.cart')as HTMLInputElement).onclick = createModalContent
+(document.querySelector('.cart') as HTMLInputElement).onclick =
+  createModalContent
 
 // -------------------------- ONLOAD CART STATE FUNCTION--------------------------
-function onLoadCartState () :void {
+function onLoadCartState(): void {
   const count: number = parseInt(localStorage.getItem('noOfProducts')!)
   const price: number = parseInt(localStorage.getItem('Price')!)
-  const dataProducts :Products | string[] = JSON.parse(localStorage.getItem('productArray')!)
+  const dataProducts: Products | string[] = JSON.parse(
+    localStorage.getItem('productArray')!
+  )
   if (count) {
     document.querySelector('.cart span')!.textContent = count.toString()
     document.querySelector('.price span')!.textContent = price.toString()
@@ -112,7 +114,7 @@ function onLoadCartState () :void {
 
 // -------------------------- CLEAR CART FUNCTION ------------------------------
 // CLEAR CART
-(document.querySelector('.clear-cart')as HTMLElement).onclick = function () {
+(document.querySelector('.clear-cart') as HTMLElement).onclick = function () {
   document.getElementById('modal-values')!.remove()
 
   // Saving data before clearing for next times
@@ -122,7 +124,6 @@ function onLoadCartState () :void {
   localStorage.setItem('data', JSON.stringify(products))
   document.querySelector('.cart span')!.textContent = '0'
   document.querySelector('.price span')!.textContent = '0'
-
   createIndex(end)
   productCount = 0
   productArray = []
@@ -131,21 +132,23 @@ function onLoadCartState () :void {
   const modalDiv: HTMLDivElement = document.createElement('div')
   modalDiv.className = 'modal-values'
   modalDiv.id = 'modal-values'
-  const mainModal: Element|null = document.querySelector('.modal-body')
+  const mainModal: Element | null = document.querySelector('.modal-body')
   mainModal!.append(modalDiv)
 };
 // --------------------------------------------------------------------------------
 
 // ----------------------------------- PAGINATION ----------------------------------------
-(document.querySelector('.pageForward')as HTMLInputElement).onclick = pageForward
+(document.querySelector('.pageForward') as HTMLInputElement).onclick =
+  pageForward
 
 // Forward function for Pagintation
-function pageForward () :void {
-  if (currentPage < 19) {
-    start += 8
-    end += 8
+async function pageForward(): Promise<void> {
+  if (currentPage < 16) {
     currentPage++
-    const productsDiv: Element|null = document.querySelector('#Products')
+    localStorage.setItem('currrentPage', currentPage.toString())
+    await getProducts('http://localhost:5000/api/products/?page=' + currentPage)
+    products = JSON.parse(localStorage.getItem('data')!)
+    const productsDiv: Element | null = document.querySelector('#Products')
     productsDiv!.innerHTML = ''
     document.getElementById('pageBack')!.className = 'page-item'
     showProducts(products, start, end)
@@ -154,14 +157,15 @@ function pageForward () :void {
   }
 }
 
-(document.querySelector('.pageBack')as HTMLInputElement).onclick = pageBack
+(document.querySelector('.pageBack') as HTMLInputElement).onclick = pageBack
 // Backward function for Pagintation
-function pageBack () :void {
+async function pageBack(): Promise<void> {
   if (currentPage > 1) {
-    start -= 8
-    end -= 8
     currentPage--
-    const productsDiv : Element|null = document.querySelector('#Products')
+    localStorage.setItem('currrentPage', currentPage.toString())
+    await getProducts('http://localhost:5000/api/products/?page=' + currentPage)
+    products = JSON.parse(localStorage.getItem('data')!)
+    const productsDiv: Element | null = document.querySelector('#Products')
     productsDiv!.innerHTML = ''
     document.getElementById('pageForward')!.className = 'page-item'
     showProducts(products, start, end)
